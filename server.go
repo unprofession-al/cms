@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -30,6 +32,7 @@ func NewServer(listener, static string, sites map[string]*Site) Server {
 	r.HandleFunc("/sites/", s.SitesHandler).Methods("GET")
 	r.HandleFunc("/sites/{site}", s.TreeHandler).Methods("GET")
 	r.PathPrefix("/sites/{site}/").HandlerFunc(s.FileHandler).Methods("GET")
+	r.PathPrefix("/sites/{site}/").HandlerFunc(s.FileWriteHandler).Methods("POST")
 
 	if static != "" {
 		r.PathPrefix("/").Handler(http.FileServer(http.Dir(static)))
@@ -124,9 +127,49 @@ func (s Server) FileHandler(res http.ResponseWriter, req *http.Request) {
 		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Could not read %s: %s", path, err.Error()))
 		return
 	}
+	defer file.Close()
 
 	b := new(bytes.Buffer)
 	b.ReadFrom(file)
 
 	s.raw(res, http.StatusOK, b.Bytes())
+}
+
+func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	name, ok := vars["site"]
+	if !ok {
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Site not provided"))
+		return
+	}
+	site, ok := s.sites[name]
+	if !ok {
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Site %s not found", name))
+		return
+	}
+
+	path := strings.TrimPrefix(req.URL.Path, "/sites/"+name)
+	path = site.BaseDir + path
+	file, err := site.fs.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0755)
+	if err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Could not read %s: %s", path, err.Error()))
+		return
+	}
+	defer file.Close()
+
+	b, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
+	if err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Could not read request body: %s", err.Error()))
+		return
+	}
+
+	l, err := file.Write(b)
+	if err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Could not write file %s: %s", path, err.Error()))
+		return
+	}
+
+	s.respond(res, req, http.StatusOK, l)
 }
