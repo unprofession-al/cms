@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
@@ -27,6 +29,7 @@ func NewServer(listener, static string, repos map[string]billy.Filesystem) Serve
 	r := mux.NewRouter().StrictSlash(true)
 
 	r.HandleFunc("/{repo}", s.TreeHandler).Methods("GET")
+	r.PathPrefix("/{repo}/").HandlerFunc(s.FileHandler).Methods("GET")
 
 	if static != "" {
 		r.PathPrefix("/").Handler(http.FileServer(http.Dir(static)))
@@ -41,7 +44,7 @@ func (s Server) Run() {
 	log.Fatal(http.ListenAndServe(s.listener, s.handler))
 }
 
-func (s Server) Respond(res http.ResponseWriter, req *http.Request, code int, data interface{}) {
+func (s Server) respond(res http.ResponseWriter, req *http.Request, code int, data interface{}) {
 	var err error
 	var errMesg []byte
 	var out []byte
@@ -70,24 +73,56 @@ func (s Server) Respond(res http.ResponseWriter, req *http.Request, code int, da
 	res.Write(out)
 }
 
+func (s Server) raw(res http.ResponseWriter, code int, data []byte) {
+	res.WriteHeader(code)
+	res.Write(data)
+}
+
 func (s Server) TreeHandler(res http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	repo, ok := vars["repo"]
 	if !ok {
-		s.Respond(res, req, http.StatusNotFound, fmt.Errorf("Repo param not provided"))
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Repo param not provided"))
 		return
 	}
 	fs, ok := s.repos[repo]
 	if !ok {
-		s.Respond(res, req, http.StatusNotFound, fmt.Errorf("Repo %s not found", repo))
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Repo %s not found", repo))
 		return
 	}
 
-	tree, err := Walk(".", fs)
+	tree, err := WalkNode(".", fs)
 	if err != nil {
-		s.Respond(res, req, http.StatusInternalServerError, err.Error())
+		s.respond(res, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	s.Respond(res, req, http.StatusOK, tree)
+	s.respond(res, req, http.StatusOK, tree)
+}
+
+func (s Server) FileHandler(res http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	repo, ok := vars["repo"]
+	if !ok {
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Repo param not provided"))
+		return
+	}
+	fs, ok := s.repos[repo]
+	if !ok {
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Repo %s not found", repo))
+		return
+	}
+
+	path := strings.TrimPrefix(req.URL.Path, "/"+repo)
+	file, err := fs.Open(path)
+	if err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Could not read %s: %s", file, err.Error()))
+		return
+	}
+
+	b := new(bytes.Buffer)
+	b.ReadFrom(file)
+
+	s.raw(res, http.StatusOK, b.Bytes())
 }

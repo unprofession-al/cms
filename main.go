@@ -71,26 +71,42 @@ func main() {
 	s.Run()
 }
 
-type Branch map[string]*Branch
+type Node struct {
+	Name     string `json:"name"`
+	IsDir    bool   `json:"is_dir"`
+	FullPath string `json:"full_path"`
+	Children []Node `json:"children"`
+}
 
-func Walk(root string, fs billy.Filesystem) (Branch, error) {
-	b := Branch{}
-	elems, err := fs.ReadDir(root)
-	if err != nil {
-		return b, err
+func WalkNode(path string, fs billy.Filesystem) (Node, error) {
+	n := Node{
+		Children: []Node{},
+		FullPath: path,
 	}
-	for _, elem := range elems {
-		if elem.IsDir() {
-			child, err := Walk(root+"/"+elem.Name(), fs)
+
+	e, err := fs.Stat(path)
+	if err != nil {
+		return n, err
+	}
+
+	n.Name = e.Name()
+	n.IsDir = e.IsDir()
+
+	if n.IsDir {
+		elems, err := fs.ReadDir(path)
+		if err != nil {
+			return n, err
+		}
+		for _, elem := range elems {
+			elemName := fmt.Sprintf("%s/%s", path, elem.Name())
+			c, err := WalkNode(elemName, fs)
 			if err != nil {
-				return b, err
+				return n, err
 			}
-			b[elem.Name()] = &child
-		} else {
-			b[elem.Name()] = nil
+			n.Children = append(n.Children, c)
 		}
 	}
-	return b, nil
+	return n, nil
 }
 
 func CheckIfError(err error) {
