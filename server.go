@@ -9,9 +9,12 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/yaml.v2"
 )
 
@@ -30,9 +33,11 @@ func NewServer(listener, static string, sites map[string]*Site) Server {
 	r := mux.NewRouter().StrictSlash(true)
 
 	r.HandleFunc("/sites/", s.SitesHandler).Methods("GET")
-	r.HandleFunc("/sites/{site}", s.TreeHandler).Methods("GET")
-	r.PathPrefix("/sites/{site}/").HandlerFunc(s.FileHandler).Methods("GET")
-	r.PathPrefix("/sites/{site}/").HandlerFunc(s.FileWriteHandler).Methods("POST")
+	r.HandleFunc("/sites/{site}/status", s.StatusHandler).Methods("GET")
+	r.HandleFunc("/sites/{site}/publish", s.PublishHandler).Methods("POST")
+	r.HandleFunc("/sites/{site}/files", s.TreeHandler).Methods("GET")
+	r.PathPrefix("/sites/{site}/files/").HandlerFunc(s.FileHandler).Methods("GET")
+	r.PathPrefix("/sites/{site}/files/").HandlerFunc(s.FileWriteHandler).Methods("POST")
 
 	if static != "" {
 		r.PathPrefix("/").Handler(http.FileServer(http.Dir(static)))
@@ -48,6 +53,9 @@ func (s Server) Run() {
 }
 
 func (s Server) respond(res http.ResponseWriter, req *http.Request, code int, data interface{}) {
+	if code != http.StatusOK {
+		fmt.Println(data)
+	}
 	var err error
 	var errMesg []byte
 	var out []byte
@@ -84,6 +92,58 @@ func (s Server) raw(res http.ResponseWriter, code int, data []byte) {
 func (s Server) SitesHandler(res http.ResponseWriter, req *http.Request) {
 	s.respond(res, req, http.StatusOK, s.sites)
 }
+
+func (s Server) StatusHandler(res http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	name, ok := vars["site"]
+	if !ok {
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Site not provided"))
+		return
+	}
+	site, ok := s.sites[name]
+	if !ok {
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Site %s not found", name))
+		return
+	}
+
+	w, err := site.repo.Worktree()
+	if err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Worktree for %s could not be built: %s", site, err.Error()))
+		return
+	}
+
+	status, err := w.Status()
+	if err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Status for %s could not be fetched: %s", site, err.Error()))
+		return
+	}
+
+	s.respond(res, req, http.StatusOK, status)
+}
+
+func (s Server) PublishHandler(res http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	name, ok := vars["site"]
+	if !ok {
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Site not provided"))
+		return
+	}
+	site, ok := s.sites[name]
+	if !ok {
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Site %s not found", name))
+		return
+	}
+
+	err := site.repo.Push(&git.PushOptions{})
+
+	if err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Could not push changes of %: %s", site, err.Error()))
+		return
+	}
+
+	s.respond(res, req, http.StatusOK, "published")
+}
+
 func (s Server) TreeHandler(res http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	name, ok := vars["site"]
@@ -120,7 +180,7 @@ func (s Server) FileHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	path := strings.TrimPrefix(req.URL.Path, "/sites/"+name)
+	path := strings.TrimPrefix(req.URL.Path, "/sites/"+name+"/files")
 	path = site.BaseDir + path
 	file, err := site.fs.Open(path)
 	if err != nil {
@@ -149,7 +209,7 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	path := strings.TrimPrefix(req.URL.Path, "/sites/"+name)
+	path := strings.TrimPrefix(req.URL.Path, "/sites/"+name+"/files")
 	path = site.BaseDir + path
 	file, err := site.fs.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0755)
 	if err != nil {
@@ -165,11 +225,28 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	l, err := file.Write(b)
+	_, err = file.Write(b)
 	if err != nil {
 		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Could not write file %s: %s", path, err.Error()))
 		return
 	}
 
-	s.respond(res, req, http.StatusOK, l)
+	w, err := site.repo.Worktree()
+	if err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Worktree for %s could not be built: %s", site, err.Error()))
+		return
+	}
+	commit, err := w.Commit(fmt.Sprintf("Changes commited via cms for %s", path), &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "John Doe",
+			Email: "john@doe.org",
+			When:  time.Now(),
+		},
+	})
+	if err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Changes for %s could not be commited: %s", site, err.Error()))
+		return
+	}
+
+	s.respond(res, req, http.StatusOK, commit)
 }
