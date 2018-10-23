@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/spf13/pflag"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/src-d/go-billy.v4"
@@ -20,7 +21,7 @@ var (
 	static   string
 	key      string
 	pass     string
-	repos    []string
+	config   string
 )
 
 func init() {
@@ -28,11 +29,39 @@ func init() {
 	pflag.StringVarP(&key, "key", "k", "id_rsa", "path to ssh key")
 	pflag.StringVarP(&pass, "pass", "p", "", "password of the ssh key")
 	pflag.StringVarP(&static, "static", "s", "", "serve given dir as http root")
-	pflag.StringSliceVarP(&repos, "repos", "r", []string{}, "repos")
+	pflag.StringVarP(&config, "config", "c", "cms.yaml", "configuration file")
+}
+
+type Site struct {
+	Git     string `yaml:"git"`
+	Key     string `yaml:"key"`
+	BaseDir string `yaml:"baseDir"`
+	fs      billy.Filesystem
+	repo    *git.Repository
+}
+
+type Config struct {
+	Sites map[string]*Site `yaml:"sites"`
+}
+
+func NewConfig(path string) (Config, error) {
+	c := Config{}
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return c, fmt.Errorf("Error while reading configuration file '%s': %s", path, err.Error())
+	}
+	err = yaml.Unmarshal(data, &c)
+	if err != nil {
+		return c, fmt.Errorf("Error while unmarshalling configuration '%s' from yaml: %s", path, err.Error())
+	}
+	return c, nil
 }
 
 func main() {
 	pflag.Parse()
+
+	c, err := NewConfig(config)
+	CheckIfError(err)
 
 	pem, err := ioutil.ReadFile(key)
 	CheckIfError(err)
@@ -40,34 +69,18 @@ func main() {
 	CheckIfError(err)
 	auth := &ssh2.PublicKeys{User: "git", Signer: signer}
 
-	list := map[string]string{
-		"unprofessional": "unprofession-al/website",
-		"sontags":        "sontags/sonta.gs",
-	}
-
-	for _, param := range repos {
-		tokens := strings.SplitN(param, "=", 2)
-		if len(tokens) == 2 {
-			list[tokens[0]] = tokens[1]
-		} else {
-			fmt.Fprintf(os.Stderr, "Param '%s' is invalid, must match pattern [key]=[value] ", param)
-		}
-	}
-
-	repolist := map[string]billy.Filesystem{}
-	for name, src := range list {
-		url := fmt.Sprintf("git@github.com:%s.git", src)
-		fmt.Printf("Loading %s from %s...\n", name, url)
+	for name, site := range c.Sites {
+		fmt.Printf("Loading %s from %s...\n", name, site.Git)
 		fs := memfs.New()
-		_, err = git.Clone(memory.NewStorage(), fs, &git.CloneOptions{
-			URL:  url,
+		c.Sites[name].repo, err = git.Clone(memory.NewStorage(), fs, &git.CloneOptions{
+			URL:  site.Git,
 			Auth: auth,
 		})
 		CheckIfError(err)
-		repolist[name] = fs
+		c.Sites[name].fs = fs
 	}
 
-	s := NewServer(listener, static, repolist)
+	s := NewServer(listener, static, c.Sites)
 	s.Run()
 }
 
@@ -78,10 +91,10 @@ type Node struct {
 	Children []Node `json:"children"`
 }
 
-func WalkNode(path string, fs billy.Filesystem) (Node, error) {
+func WalkNode(path string, fs billy.Filesystem, trim string) (Node, error) {
 	n := Node{
 		Children: []Node{},
-		FullPath: path,
+		FullPath: strings.TrimPrefix(path, trim),
 	}
 
 	e, err := fs.Stat(path)
@@ -99,7 +112,7 @@ func WalkNode(path string, fs billy.Filesystem) (Node, error) {
 		}
 		for _, elem := range elems {
 			elemName := fmt.Sprintf("%s/%s", path, elem.Name())
-			c, err := WalkNode(elemName, fs)
+			c, err := WalkNode(elemName, fs, trim)
 			if err != nil {
 				return n, err
 			}

@@ -1,0 +1,9 @@
+sites:
+  sontags:
+    git: git@github.com:sontags/sonta.gs.git
+    key: private
+    baseDir: /content/
+  unprofessional:
+    git: git@github.com:unprofession-al/website.git
+    key: private
+    baseDir: /

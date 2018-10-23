@@ -1,6 +1,7 @@
 module github.com/unprofession-al/cms
 
 require (
+	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2
 	github.com/justinas/alice v0.0.0-20171023064455-03f45bd4b7da

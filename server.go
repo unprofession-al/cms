@@ -10,26 +10,26 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
-	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/yaml.v2"
 )
 
 type Server struct {
-	repos    map[string]billy.Filesystem
+	sites    map[string]*Site
 	listener string
 	handler  http.Handler
 }
 
-func NewServer(listener, static string, repos map[string]billy.Filesystem) Server {
+func NewServer(listener, static string, sites map[string]*Site) Server {
 	s := Server{
 		listener: listener,
-		repos:    repos,
+		sites:    sites,
 	}
 
 	r := mux.NewRouter().StrictSlash(true)
 
-	r.HandleFunc("/{repo}", s.TreeHandler).Methods("GET")
-	r.PathPrefix("/{repo}/").HandlerFunc(s.FileHandler).Methods("GET")
+	r.HandleFunc("/sites/", s.SitesHandler).Methods("GET")
+	r.HandleFunc("/sites/{site}", s.TreeHandler).Methods("GET")
+	r.PathPrefix("/sites/{site}/").HandlerFunc(s.FileHandler).Methods("GET")
 
 	if static != "" {
 		r.PathPrefix("/").Handler(http.FileServer(http.Dir(static)))
@@ -78,20 +78,23 @@ func (s Server) raw(res http.ResponseWriter, code int, data []byte) {
 	res.Write(data)
 }
 
+func (s Server) SitesHandler(res http.ResponseWriter, req *http.Request) {
+	s.respond(res, req, http.StatusOK, s.sites)
+}
 func (s Server) TreeHandler(res http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	repo, ok := vars["repo"]
+	name, ok := vars["site"]
 	if !ok {
-		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Repo param not provided"))
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Site not provided"))
 		return
 	}
-	fs, ok := s.repos[repo]
+	site, ok := s.sites[name]
 	if !ok {
-		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Repo %s not found", repo))
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Site %s not found", site))
 		return
 	}
 
-	tree, err := WalkNode(".", fs)
+	tree, err := WalkNode(site.BaseDir, site.fs, site.BaseDir)
 	if err != nil {
 		s.respond(res, req, http.StatusInternalServerError, err.Error())
 		return
@@ -103,21 +106,22 @@ func (s Server) TreeHandler(res http.ResponseWriter, req *http.Request) {
 func (s Server) FileHandler(res http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	repo, ok := vars["repo"]
+	name, ok := vars["site"]
 	if !ok {
-		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Repo param not provided"))
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Site not provided"))
 		return
 	}
-	fs, ok := s.repos[repo]
+	site, ok := s.sites[name]
 	if !ok {
-		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Repo %s not found", repo))
+		s.respond(res, req, http.StatusNotFound, fmt.Errorf("Site %s not found", name))
 		return
 	}
 
-	path := strings.TrimPrefix(req.URL.Path, "/"+repo)
-	file, err := fs.Open(path)
+	path := strings.TrimPrefix(req.URL.Path, "/sites/"+name)
+	path = site.BaseDir + path
+	file, err := site.fs.Open(path)
 	if err != nil {
-		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Could not read %s: %s", file, err.Error()))
+		s.respond(res, req, http.StatusInternalServerError, fmt.Errorf("Could not read %s: %s", path, err.Error()))
 		return
 	}
 
