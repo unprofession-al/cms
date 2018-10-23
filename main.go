@@ -50,9 +50,14 @@ func NewConfig(path string) (Config, error) {
 	if err != nil {
 		return c, fmt.Errorf("Error while reading configuration file '%s': %s", path, err.Error())
 	}
+
 	err = yaml.Unmarshal(data, &c)
 	if err != nil {
 		return c, fmt.Errorf("Error while unmarshalling configuration '%s' from yaml: %s", path, err.Error())
+	}
+
+	for _, site := range c.Sites {
+		site.BaseDir = strings.Trim(site.BaseDir, "/")
 	}
 	return c, nil
 }
