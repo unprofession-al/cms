@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ghodss/yaml"
 	"github.com/spf13/pflag"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/src-d/go-billy.v4"
@@ -14,6 +13,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	ssh2 "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
+	"gopkg.in/yaml.v2"
 )
 
 var (
