@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
@@ -67,7 +68,7 @@ func (s Server) UpdateHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	err = w.Pull(&git.PullOptions{RemoteName: "origin"})
-	if err != nil {
+	if err != nil && err != git.NoErrAlreadyUpToDate {
 		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could not pull changes of %s: %s", name, err.Error()))
 		return
 	}
@@ -89,10 +90,50 @@ func (s Server) PublishHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// TODO: this should only run if changes are staged
+
+	if site.Tag != "" {
+		opts := &git.CreateTagOptions{
+			Tagger:  s.getSignature(req),
+			Message: site.Tag,
+		}
+
+		head, err := site.repo.Head()
+		if err != nil {
+			s.respond(res, req, http.StatusNotFound, fmt.Sprintf("Could not get HEAD of %s: %s", name, err.Error()))
+			return
+		}
+
+		err = site.repo.DeleteTag(site.Tag)
+		if err != nil && err != git.ErrTagNotFound {
+			s.respond(res, req, http.StatusNotFound, fmt.Sprintf("Could not get HEAD of %s: %s", err.Error()))
+			return
+		}
+
+		// TODO: Delete of remote tag must be executed
+
+		_, err = site.repo.CreateTag(site.Tag, head.Hash(), opts)
+		if err != nil {
+			s.respond(res, req, http.StatusNotFound, fmt.Sprintf("Site %s could not be tagged: %s", name, err.Error()))
+			return
+		}
+	}
+
 	err := site.repo.Push(&git.PushOptions{})
-	if err != nil {
-		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could not push changes of %s %s", name, err.Error()))
+	if err != nil && err != git.NoErrAlreadyUpToDate {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could not push changes of %s: %s", name, err.Error()))
 		return
+	}
+
+	if site.Tag != "" {
+		rs := config.RefSpec("refs/tags/*:refs/tags/*")
+		err = site.repo.Push(&git.PushOptions{
+			RefSpecs: []config.RefSpec{rs},
+		})
+		if err != nil && err != git.NoErrAlreadyUpToDate {
+			s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could not push tags of %s: %s", name, err.Error()))
+			return
+		}
 	}
 
 	s.respond(res, req, http.StatusOK, "published")
@@ -197,7 +238,7 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	commit, err := w.Commit(fmt.Sprintf("Changes commited via cms for %s", path), &git.CommitOptions{
+	_, err = w.Commit(fmt.Sprintf("Changes commited via cms for %s", path), &git.CommitOptions{
 		Author: &object.Signature{
 			Name:  "John Doe",
 			Email: "john@doe.org",
@@ -209,5 +250,5 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	s.respond(res, req, http.StatusOK, commit)
+	s.respond(res, req, http.StatusOK, "saved")
 }
