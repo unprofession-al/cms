@@ -16,26 +16,29 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var (
+var app App
+
+type App struct {
 	listener string
 	static   string
 	key      string
 	pass     string
 	config   string
-)
+}
 
 func init() {
-	pflag.StringVarP(&listener, "listener", "l", "0.0.0.0:8765", "ip/port to listen on")
-	pflag.StringVarP(&key, "key", "k", "id_rsa", "path to ssh key")
-	pflag.StringVarP(&pass, "pass", "p", "", "password of the ssh key")
-	pflag.StringVarP(&static, "static", "s", "", "serve given dir as http root")
-	pflag.StringVarP(&config, "config", "c", "cms.yaml", "configuration file")
+	pflag.StringVarP(&app.listener, "listener", "l", "0.0.0.0:8765", "ip/port to listen on")
+	pflag.StringVarP(&app.key, "key", "k", "id_rsa", "path to ssh key")
+	pflag.StringVarP(&app.pass, "pass", "p", "", "password of the ssh key")
+	pflag.StringVarP(&app.static, "static", "s", "", "serve given dir as http root")
+	pflag.StringVarP(&app.config, "config", "c", "cms.yaml", "configuration file")
 }
 
 type Site struct {
 	Git     string `yaml:"git"`
 	Key     string `yaml:"key"`
 	BaseDir string `yaml:"baseDir"`
+	Tag     string `yaml:"tag"`
 	fs      billy.Filesystem
 	repo    *git.Repository
 }
@@ -65,12 +68,12 @@ func NewConfig(path string) (Config, error) {
 func main() {
 	pflag.Parse()
 
-	c, err := NewConfig(config)
+	c, err := NewConfig(app.config)
 	CheckIfError(err)
 
-	pem, err := ioutil.ReadFile(key)
+	pem, err := ioutil.ReadFile(app.key)
 	CheckIfError(err)
-	signer, err := ssh.ParsePrivateKeyWithPassphrase(pem, []byte(pass))
+	signer, err := ssh.ParsePrivateKeyWithPassphrase(pem, []byte(app.pass))
 	CheckIfError(err)
 	auth := &ssh2.PublicKeys{User: "git", Signer: signer}
 
@@ -78,14 +81,15 @@ func main() {
 		fmt.Printf("Loading %s from %s...\n", name, site.Git)
 		fs := memfs.New()
 		c.Sites[name].repo, err = git.Clone(memory.NewStorage(), fs, &git.CloneOptions{
-			URL:  site.Git,
-			Auth: auth,
+			URL:      site.Git,
+			Auth:     auth,
+			Progress: os.Stdout,
 		})
 		CheckIfError(err)
 		c.Sites[name].fs = fs
 	}
 
-	s := NewServer(listener, static, c.Sites)
+	s := NewServer(app.listener, app.static, c.Sites)
 	s.Run()
 }
 

@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/yaml.v2"
 )
 
@@ -44,6 +46,14 @@ func NewServer(listener, static string, sites map[string]*Site) Server {
 func (s Server) Run() {
 	fmt.Printf("Serving cms at http://%s\nPress CTRL-c to stop...\n", s.listener)
 	log.Fatal(http.ListenAndServe(s.listener, s.handler))
+}
+
+func (s Server) getSignature(req *http.Request) *object.Signature {
+	return &object.Signature{
+		Name:  "John Doe",
+		Email: "john@doe.org",
+		When:  time.Now(),
+	}
 }
 
 func (s Server) respond(res http.ResponseWriter, req *http.Request, code int, data interface{}) {
