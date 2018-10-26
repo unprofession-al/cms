@@ -1,0 +1,30 @@
+<!DOCTYPE html
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>cms</title>
+        <link rel="stylesheet" href="lib/pen/pen.css" />
+    </head>
+    <body>
+        <div id="editor"></div>
+
+        <script src="https://unpkg.com/js-yaml@3.10.0/dist/js-yaml.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+        <script src="js/yamlFront.js"></script>
+        <script src="lib/pen/pen.js"></script>
+        <script>
+            axios.get("/sites/test/files/3/test.md", { responseType: 'text' }).then(data=>renderHTML(data.data))
+
+            function renderHTML(data) {
+                fmmd = yamlFront.loadFront(data)
+                var html = marked(fmmd.__content)
+                document.getElementById("editor").innerHTML = html
+                var y = jsyaml.dump(fmmd)
+                console.log(y)
+            }
+
+            var editor = new Pen(document.getElementById('editor'));
+        </script>
+    </body>
+</html>
