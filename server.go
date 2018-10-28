@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -91,4 +93,42 @@ func (s Server) respond(res http.ResponseWriter, req *http.Request, code int, da
 func (s Server) raw(res http.ResponseWriter, code int, data []byte) {
 	res.WriteHeader(code)
 	res.Write(data)
+}
+
+func splitMarkdown(data []byte) (frontmatter, markdown []byte, err error) {
+	d := []byte("---\n")
+	if bytes.Count(data, d) < 2 {
+		errors.New("Input does not look like markdown with frontmatter")
+		return
+	}
+	parts := bytes.SplitN(data, d, 3)
+	frontmatter = parts[1]
+	markdown = parts[2]
+	return
+}
+
+func joinMarkdown(file, data []byte, section string) (out []byte, err error) {
+	d := []byte("---\n")
+	if bytes.Count(file, d) < 2 {
+		errors.New("Input does not look like markdown with frontmatter")
+		return
+	}
+	parts := bytes.SplitN(file, d, 3)
+
+	frontmatter := parts[1]
+	markdown := parts[2]
+
+	if section == "fm" {
+		frontmatter = data
+	} else if section == "md" {
+		markdown = data
+	} else {
+		fmt.Errorf("Sectoin %s is unknown", section)
+		return
+	}
+
+	concat := [][]byte{d, frontmatter, d, markdown}
+	out = bytes.Join(concat, []byte(""))
+
+	return
 }
