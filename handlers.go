@@ -11,7 +11,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
@@ -90,50 +89,10 @@ func (s Server) PublishHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO: this should only run if changes are staged
-
-	if site.Tag != "" {
-		opts := &git.CreateTagOptions{
-			Tagger:  s.getSignature(req),
-			Message: site.Tag,
-		}
-
-		head, err := site.repo.Head()
-		if err != nil {
-			s.respond(res, req, http.StatusNotFound, fmt.Sprintf("Could not get HEAD of %s: %s", name, err.Error()))
-			return
-		}
-
-		err = site.repo.DeleteTag(site.Tag)
-		if err != nil && err != git.ErrTagNotFound {
-			s.respond(res, req, http.StatusNotFound, fmt.Sprintf("Could not get HEAD of %s: %s", err.Error()))
-			return
-		}
-
-		// TODO: Delete of remote tag must be executed
-
-		_, err = site.repo.CreateTag(site.Tag, head.Hash(), opts)
-		if err != nil {
-			s.respond(res, req, http.StatusNotFound, fmt.Sprintf("Site %s could not be tagged: %s", name, err.Error()))
-			return
-		}
-	}
-
 	err := site.repo.Push(&git.PushOptions{})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could not push changes of %s: %s", name, err.Error()))
 		return
-	}
-
-	if site.Tag != "" {
-		rs := config.RefSpec("refs/tags/*:refs/tags/*")
-		err = site.repo.Push(&git.PushOptions{
-			RefSpecs: []config.RefSpec{rs},
-		})
-		if err != nil && err != git.NoErrAlreadyUpToDate {
-			s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could not push tags of %s: %s", name, err.Error()))
-			return
-		}
 	}
 
 	s.respond(res, req, http.StatusOK, "published")
@@ -187,11 +146,7 @@ func (s Server) FileHandler(res http.ResponseWriter, req *http.Request) {
 	b := new(bytes.Buffer)
 	b.ReadFrom(file)
 
-	var o string
-	only := req.URL.Query()["o"]
-	if len(only) > 0 {
-		o = only[0]
-	}
+	o := mdParam.First(req)
 
 	data := []byte{}
 	switch o {
@@ -247,18 +202,13 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// get 'o' query param
-	var o string
-	only := req.URL.Query()["o"]
-	if len(only) > 0 {
-		o = only[0]
-	}
+	o := mdParam.First(req)
 
 	// build now file if requested
 	if o != "" {
 		old := new(bytes.Buffer)
 		old.ReadFrom(file)
 		content, err = joinMarkdown(old.Bytes(), b, o)
-		fmt.Println(string(b))
 		if err != nil {
 			s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could generate content of file %s: %s", path, err.Error()))
 			return

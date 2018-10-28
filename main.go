@@ -38,7 +38,6 @@ type Site struct {
 	Git     string `yaml:"git"`
 	Key     string `yaml:"key"`
 	BaseDir string `yaml:"baseDir"`
-	Tag     string `yaml:"tag"`
 	fs      billy.Filesystem
 	repo    *git.Repository
 }

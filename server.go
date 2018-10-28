@@ -29,13 +29,8 @@ func NewServer(listener, static string, sites map[string]*Site) Server {
 
 	r := mux.NewRouter().StrictSlash(true)
 
-	r.HandleFunc("/sites/", s.SitesHandler).Methods("GET")
-	r.HandleFunc("/sites/{site}/status", s.StatusHandler).Methods("GET")
-	r.HandleFunc("/sites/{site}/publish", s.PublishHandler).Methods("PUT")
-	r.HandleFunc("/sites/{site}/update", s.UpdateHandler).Methods("PUT")
-	r.HandleFunc("/sites/{site}/files", s.TreeHandler).Methods("GET")
-	r.PathPrefix("/sites/{site}/files/").HandlerFunc(s.FileHandler).Methods("GET")
-	r.PathPrefix("/sites/{site}/files/").HandlerFunc(s.FileWriteHandler).Methods("POST")
+	routes := s.sitesRoutes()
+	routes.Populate(r, "sites")
 
 	if static != "" {
 		r.PathPrefix("/").Handler(http.FileServer(http.Dir(static)))
@@ -66,12 +61,7 @@ func (s Server) respond(res http.ResponseWriter, req *http.Request, code int, da
 	var errMesg []byte
 	var out []byte
 
-	f := "json"
-	format := req.URL.Query()["f"]
-	if len(format) > 0 {
-		f = format[0]
-	}
-
+	f := formatParam.First(req)
 	if f == "yaml" {
 		res.Header().Set("Content-Type", "text/yaml; charset=utf-8")
 		out, err = yaml.Marshal(data)

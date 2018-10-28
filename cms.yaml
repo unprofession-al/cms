@@ -3,9 +3,7 @@ sites:
     git: git@github.com:unprofession-al/website.git
     key: private
     baseDir: /
-    tag: latest
   test:
     git: git@github.com:unprofession-al/cmstestrepo.git
     key: private
     baseDir: /content
-    tag: published
