@@ -187,7 +187,27 @@ func (s Server) FileHandler(res http.ResponseWriter, req *http.Request) {
 	b := new(bytes.Buffer)
 	b.ReadFrom(file)
 
-	s.raw(res, http.StatusOK, b.Bytes())
+	var o string
+	only := req.URL.Query()["o"]
+	if len(only) > 0 {
+		o = only[0]
+	}
+
+	data := []byte{}
+	switch o {
+	case "fm":
+		data, _, err = splitMarkdown(b.Bytes())
+	case "md":
+		_, data, err = splitMarkdown(b.Bytes())
+	default:
+		data = b.Bytes()
+	}
+	if err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Coult not get file part %s: %s", path, err.Error()))
+		return
+	}
+
+	s.raw(res, http.StatusOK, data)
 }
 
 func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
@@ -204,15 +224,21 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	var content []byte
+
+	// get file name
 	path := strings.TrimPrefix(req.URL.Path, "/sites/"+name+"/files")
 	path = site.BaseDir + path
-	file, err := site.fs.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0755)
+
+	// get file
+	file, err := site.fs.OpenFile(path, os.O_RDWR, 0755)
 	if err != nil {
 		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could not read %s: %s", path, err.Error()))
 		return
 	}
 	defer file.Close()
 
+	// read request body
 	b, err := ioutil.ReadAll(req.Body)
 	defer req.Body.Close()
 	if err != nil {
@@ -220,20 +246,49 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, err = file.Write(b)
-	if err != nil {
+	// get 'o' query param
+	var o string
+	only := req.URL.Query()["o"]
+	if len(only) > 0 {
+		o = only[0]
+	}
+
+	// build now file if requested
+	if o != "" {
+		old := new(bytes.Buffer)
+		old.ReadFrom(file)
+		content, err = joinMarkdown(old.Bytes(), b, o)
+		fmt.Println(string(b))
+		if err != nil {
+			s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could generate content of file %s: %s", path, err.Error()))
+			return
+		}
+	} else {
+		content = b
+	}
+
+	// write file
+	if err = file.Truncate(0); err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could not truncate file %s: %s", path, err.Error()))
+		return
+	}
+	if _, err = file.Seek(0, 0); err != nil {
+		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could not go to beginning of file %s: %s", path, err.Error()))
+		return
+	}
+	if _, err = file.Write(content); err != nil {
 		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Could not write file %s: %s", path, err.Error()))
 		return
 	}
 
+	// add/commit
 	w, err := site.repo.Worktree()
 	if err != nil {
 		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Worktree for %s could not be built: %s", name, err.Error()))
 		return
 	}
 
-	_, err = w.Add(path)
-	if err != nil {
+	if _, err = w.Add(path); err != nil {
 		s.respond(res, req, http.StatusInternalServerError, fmt.Sprintf("Changes for %s could not be added: %s", name, err.Error()))
 		return
 	}
@@ -250,5 +305,6 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// done
 	s.respond(res, req, http.StatusOK, "saved")
 }
