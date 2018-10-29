@@ -1,0 +1,45 @@
+html, body, .container, .header, .content, .footer {
+    width: 100%;
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    min-height: 100%;
+    display: grid;
+    grid-template-rows: 1fr auto;
+}
+
+.container {
+}
+
+.wrapper {
+    min-width: var(--layout-min-width);
+    max-width: var(--layout-max-width);
+    width: var(--layout-percent-width);
+    margin: 0 auto;
+}
+
+.header {
+    border-top: 10px var(--main-color) solid;
+    height: 80px;
+}
+
+.logo {
+    display: block;
+    text-indent: -9999px;
+    width: 100px;
+    height: 80px;
+    background: url(../images/cms.svg);
+    background-size: 100px 80px;
+}
+
+
+.footer {
+    height: var(--layout-footer-height);
+    grid-row-start: 2;
+    grid-row-end: 3;
+}
+

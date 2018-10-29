@@ -1,0 +1,9 @@
+:root {
+	--main-color: #000;
+
+	--layout-min-width: 600px;
+	--layout-max-width: 900px;
+	--layout-percent-width: 80%;
+
+	--layout-footer-height: 80px;
+}
