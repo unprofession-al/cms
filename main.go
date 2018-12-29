@@ -35,11 +35,12 @@ func init() {
 }
 
 type Site struct {
-	Git     string `yaml:"git"`
-	Key     string `yaml:"key"`
-	BaseDir string `yaml:"baseDir"`
-	fs      billy.Filesystem
-	repo    *git.Repository
+	Git        string   `yaml:"git"`
+	Key        string   `yaml:"key"`
+	BaseDir    string   `yaml:"baseDir"`
+	ExtAllowed []string `yaml:"extensionsAllowed"`
+	fs         billy.Filesystem
+	repo       *git.Repository
 }
 
 type Config struct {
@@ -99,7 +100,7 @@ type Node struct {
 	Children []Node `json:"children"`
 }
 
-func WalkNode(path string, fs billy.Filesystem, trim string) (Node, error) {
+func WalkNode(path string, fs billy.Filesystem, trim string, extAllowed []string) (Node, error) {
 	n := Node{
 		Children: []Node{},
 		FullPath: strings.TrimPrefix(path, trim),
@@ -120,11 +121,30 @@ func WalkNode(path string, fs billy.Filesystem, trim string) (Node, error) {
 		}
 		for _, elem := range elems {
 			elemName := fmt.Sprintf("%s/%s", path, elem.Name())
-			c, err := WalkNode(elemName, fs, trim)
+			c, err := WalkNode(elemName, fs, trim, extAllowed)
 			if err != nil {
 				return n, err
 			}
-			n.Children = append(n.Children, c)
+
+			// if name is "" either the folder is empty or the extention is not allowed
+			if c.Name != "" {
+				n.Children = append(n.Children, c)
+			}
+		}
+
+		// don't return if folder is empty
+		if len(n.Children) == 0 {
+			return Node{}, nil
+		}
+	} else {
+		allowed := false
+		for _, ext := range extAllowed {
+			if strings.HasSuffix(n.Name, ext) {
+				allowed = true
+			}
+		}
+		if !allowed {
+			return Node{}, nil
 		}
 	}
 	return n, nil

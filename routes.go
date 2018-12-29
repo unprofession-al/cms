@@ -1,7 +1,7 @@
 package main
 
 import (
-	r "github.com/unprofession-al/cms/router"
+	r "github.com/unprofession-al/routing"
 )
 
 func (s Server) sitesRoutes() r.Route {

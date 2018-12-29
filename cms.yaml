@@ -3,7 +3,14 @@ sites:
     git: git@github.com:unprofession-al/website.git
     key: private
     baseDir: /
+    extensionsAllowed: [ html, md ]
   test:
     git: git@github.com:unprofession-al/cmstestrepo.git
     key: private
     baseDir: /content
+    extensionsAllowed: [ md ]
+  kammermusik-hondrich:
+    git: git@github.com:sontags/kammermusik-hondrich.ch.git
+    key: private
+    baseDir: /content
+    extensionsAllowed: [ md ]

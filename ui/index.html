@@ -1,79 +1,25 @@
-<!DOCTYPE html
+<!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8">
-		<title>cms</title>
-
-		<style type="text/css">
-*{padding:0;margin:0;}
-html{border-top:10px #1abf89 solid;}
-body{width:800px;margin:0 auto;padding:5% 20px 20px;font-family:Palatino, Optima, Georgia, serif;}
-@media all and (max-width:1024px){ body, pre a{width:60%;} }
-small{color:#999;}
-pre{white-space:pre-wrap;}
-
-#toolbar{margin-bottom:1em;position:fixed;left:20px;margin-top:5px;}
-#toolbar [class^="icon-"]:before, #toolbar [class*=" icon-"]:before{font-family:'pen'}
-#mode{color:#1abf89;;cursor:pointer;}
-#mode.disabled{color:#666;}
-#mode:before{content: '\e813';}
-#hinted{color:#1abf89;cursor:pointer;}
-#hinted.disabled{color:#666;}
-#hinted:before{content: '\e816';}
-#tomd{color:#fff;border-radius:2px;line-height:1;padding:1px 3px 0; font-size:0.8em;background:#000;cursor:pointer;}
-
-#fork{position:fixed;right:0;top:0;}
-
-/*
-   When the webpage is printed
-   this media query hides extra elements,
-   and makes the text content fit the page.
- */
-@media print {
-	#fork, #toolbar {
-		display: none;
-	}
-	body {
-		width: 94%;
-		padding-top: 1em;
-		font-size: 12px;
-	}
-	html {
-		border-top: 0;
-	}
-}
-		</style>
-
-
-		<link rel="stylesheet" href="lib/pen/pen.css" />
-	</head>
-	<body>
-		<div id="editor"></div>
-
-		<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-		<script src="lib/pen/pen.js"></script>
-		<script>
-			axios.get("/sites/test/files/3/test.md", {
-				responseType: 'text',
-				params: {
-					o: 'md'
-				}
-			}).then(data=>renderHTML(data.data))
-
-			function renderHTML(data) {
-				document.getElementById("editor").innerHTML = data
-			}
-
-
-			var options = {
-				editor: document.querySelector('#editor'),
-				debug: false,
-				list: [
-					'h1', 'h2', 'h3', 'p', 'code', 'indent', 'outdent', 'bold', 'italic', 'underline', 'createlink'
-				]
-			};
-			var editor = new Pen(options);
-		</script>
-	</body>
+    <head>
+        <meta charset="UTF-8">
+        <title>Mycro</title>
+        <link rel="stylesheet" type="text/css" href="assets/css/main.css">
+    </head>
+    <body>
+        <div class="grid">
+            <div class="toolbar">
+                <div class="logo">μ</div>
+                <div class="menu">
+                    <select id="projects"></select>
+                    <div class="logout">logout</div>
+                </div>
+            </div>
+            <div class="main">
+                <div class="fileselector" id="files">Files</div>
+                <div class="workarea" id="workarea">w</div>
+            </div>
+        </div>
+        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+        <script type="module" src="assets/js/main.js"></script>
+    </body>
 </html>

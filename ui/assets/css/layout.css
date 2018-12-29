@@ -1,0 +1,112 @@
+html, body {
+    width: 100%;
+    height: 100%;
+    background-color: red;
+}
+
+.grid {
+    margin: 0 auto;
+    min-height: 100vh;
+    max-width: 1700px;
+    display: grid;
+    grid-template-rows: 50px 1fr;
+    grid-template-areas:
+    "toolbar"
+    "main";
+    background-color: blue;
+}
+
+.toolbar {
+    grid-area: toolbar;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "projects logout";
+    background-color: yellow;
+}
+
+.toolbar > * {
+    padding-top: 14px;
+}
+
+#projects {
+    grid-area: projects;
+    float: left;
+}
+
+.logout {
+    grid-area: tabs;
+    text-align: right;
+}
+
+.main {
+    grid-area: main;
+    min-height: 100%;
+    height: auto !important;
+    background-color: green;
+    display: grid;
+    grid-template-columns: 1fr 4fr;
+    grid-template-areas:
+    "fileselector workarea";
+}
+
+.fileselector {
+    grid-area: fileselector;
+    background-color: orange;
+}
+
+label {
+    display: block;
+}
+
+.folder + .foldercontent {
+    padding-left: 15px;
+    height: 0;
+    opacity: 0;
+    transition: opacity 0.2s linear, height 0.2s linear;
+}
+
+.checkbox:checked + label + .foldercontent {
+    height: auto;
+    opacity: 1;
+    transition: opacity 0.2s linear, height 0.2s linear;
+}
+
+.workarea {
+    grid-area: workarea;
+    background-color: purple;
+    display: grid;
+    grid-template-rows: 1fr 50px;
+    grid-template-areas:
+    "raweditor"
+    "controls";
+}
+
+.raweditor {
+    grid-area: raweditor;
+    box-sizing: border-box;
+    display: block;
+    min-height: 100%;
+    width: 100%;
+    outline: 0;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    box-sizing: content-box;
+    background-color: white;
+    overflow: auto;
+    overflow-x: hidden;
+    padding: 10px;
+    resize: none;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.controls {
+    grid-area: controls;
+    background-color: pink;
+}
+
+.hidden {
+    display: none;
+}

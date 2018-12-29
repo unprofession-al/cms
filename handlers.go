@@ -111,7 +111,7 @@ func (s Server) TreeHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tree, err := WalkNode(site.BaseDir, site.fs, site.BaseDir)
+	tree, err := WalkNode(site.BaseDir, site.fs, site.BaseDir, site.ExtAllowed)
 	if err != nil {
 		s.respond(res, req, http.StatusInternalServerError, err.Error())
 		return
@@ -201,11 +201,13 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	fmt.Println(string(b))
+
 	// get 'o' query param
 	o := mdParam.First(req)
 
 	// build now file if requested
-	if o != "" {
+	if o != "" && o != "all" {
 		old := new(bytes.Buffer)
 		old.ReadFrom(file)
 		content, err = joinMarkdown(old.Bytes(), b, o)
@@ -216,6 +218,8 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 	} else {
 		content = b
 	}
+
+	fmt.Println(string(content))
 
 	// write file
 	if err = file.Truncate(0); err != nil {
