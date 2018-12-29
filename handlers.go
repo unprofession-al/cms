@@ -201,8 +201,6 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Println(string(b))
-
 	// get 'o' query param
 	o := mdParam.First(req)
 
@@ -218,8 +216,6 @@ func (s Server) FileWriteHandler(res http.ResponseWriter, req *http.Request) {
 	} else {
 		content = b
 	}
-
-	fmt.Println(string(content))
 
 	// write file
 	if err = file.Truncate(0); err != nil {
