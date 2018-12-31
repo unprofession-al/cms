@@ -12,7 +12,6 @@
                 <div class="logo">μ</div>
                 <div class="menu">
                     <select id="projects"></select>
-                    <div class="logout">logout</div>
                 </div>
             </div>
             <div class="main">
@@ -27,12 +26,12 @@
 
 
 <script type="text/html" id="file_tmpl">
-    <div class="file" data-path="<%=path%>"><%=name%></div>
+    <div class="file" data-path="<%=path%>"><i class="fas fa-file-code"></i> <%=name%></div>
 </script>
 
 <script type="text/html" id="folder_tmpl">
-    <input class="hidden checkbox" type="checkbox" id="<%=id%>">
-    <label class="folder" data-path="<%=path%>" for="<%=id%>"><%=name%></label>
+    <input class="hidden checkbox" type="checkbox" id="<%=id%>"></input>
+    <label class="folder" data-path="<%=path%>" for="<%=id%>"><i class="fas fa-caret-right"></i> <%=name%></label>
     <div class="foldercontent"></div>
 </script>
 
