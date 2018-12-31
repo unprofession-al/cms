@@ -1,4 +1,5 @@
 import * as mycro from './mycro.js';
+import * as tmpl from './templating.js';
 
 var projectsElement = document.querySelector("#projects");
 projectsElement.addEventListener('change', projectSelected, false);
@@ -37,34 +38,20 @@ function projectSelected() {
 };
 
 function walkFileTree(branch, parent) {
+    var id = window.btoa("checkbox_" + branch.full_path);
+    var data = { id: id, name: branch.name, path: branch.full_path };
     if (branch.is_dir == true) {
-        var checkbox = document.createElement("input");
-        checkbox.className = "hidden checkbox";
-        checkbox.type = "checkbox";
-        checkbox.id = "cb_" + branch.full_path;
-
-        var folder = document.createElement("label");
-        folder.className = "folder";
-        folder.setAttribute("data-path", branch.full_path);
-        folder.setAttribute("for", "cb_" + branch.full_path);
-        folder.innerHTML = branch.name;
-
-        var content = document.createElement("div")
-        content.className = "foldercontent";
-
-        parent.appendChild(checkbox);
-        parent.appendChild(folder);
-        parent.appendChild(content);
+        var frag = tmpl.render("folder_tmpl", data);
+        // Todo: find better solution since this need knowlodge of the dom
+        var content = frag.querySelector(".foldercontent");
+        parent.appendChild(frag);
 
         branch.children.forEach(function (child) {
             walkFileTree(child, content);
         });
     } else {
-        var file = document.createElement("div");
-        file.className = "file"
-        file.setAttribute("data-path", branch.full_path);
-        file.innerHTML = branch.name;
-        parent.appendChild(file);
+        var frag = tmpl.render("file_tmpl", data);
+        parent.appendChild(frag);
     }
 };
 
@@ -74,28 +61,18 @@ function fileSelected() {
     var project = router.project()
     mycro.getFile(project, filename).then(content => {
         workareaElement.innerHTML = "";
-        var id = window.btoa("content_"+ project + filename);
 
-        var textarea = document.createElement("textarea");
-        textarea.className = "raweditor";
-        textarea.id = id;
-        textarea.setAttribute("data-file", filename);
-        textarea.setAttribute("data-project", project);
-        textarea.value = content;
+        var data = {
+            id: window.btoa("content_" + project + filename),
+            project: project,
+            path: filename,
+            content: content,
+        };
 
-        var controls = document.createElement("div");
-        controls.className = "controls";
+        var editor = tmpl.render("editor_tmpl", data);
+        workareaElement.appendChild(editor);
 
-        var button = document.createElement("button");
-        button.setAttribute("data-file", filename);
-        button.setAttribute("data-project", project);
-        button.setAttribute("data-target", id);
-        controls.className = "save";
-        button.innerHTML = "save";
-        button.addEventListener('click', saveFile, false);
-        controls.appendChild(button);
-
-        workareaElement.appendChild(textarea);
+        var controls = tmpl.render("controls_tmpl", data);
         workareaElement.appendChild(controls);
     });
 };
@@ -130,4 +107,3 @@ var router = {
         return window.location.hash.split(this.project())[1]
     },
 };
-

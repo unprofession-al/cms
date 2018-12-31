@@ -3,6 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <title>Mycro</title>
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
         <link rel="stylesheet" type="text/css" href="assets/css/main.css">
     </head>
     <body>
@@ -23,3 +24,24 @@
         <script type="module" src="assets/js/main.js"></script>
     </body>
 </html>
+
+
+<script type="text/html" id="file_tmpl">
+    <div class="file" data-path="<%=path%>"><%=name%></div>
+</script>
+
+<script type="text/html" id="folder_tmpl">
+    <input class="hidden checkbox" type="checkbox" id="<%=id%>">
+    <label class="folder" data-path="<%=path%>" for="<%=id%>"><%=name%></label>
+    <div class="foldercontent"></div>
+</script>
+
+<script type="text/html" id="editor_tmpl">
+    <textarea class="raweditor" id="<%=id%>" data-file="<%=path%>" data-project="<%=project%>"><%=content%></textarea>
+</script>
+
+<script type="text/html" id="controls_tmpl">
+    <div class="save">
+        <button data-file="<%=path%>" data-project="<%=project%>" data-target="<%=id%>">save</button>
+    </div>
+</script>

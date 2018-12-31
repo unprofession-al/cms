@@ -1,6 +1,7 @@
 @import url('../fonts/go.css');
 
-html, body {
-    font-family: Go, serif;
+html, body, *{
+    font-family: "Go Mono", serif;
     font-size: 20px;
+    line-height: 28px;
 }

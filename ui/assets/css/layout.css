@@ -1,7 +1,6 @@
 html, body {
     width: 100%;
     height: 100%;
-    background-color: red;
 }
 
 .grid {
@@ -13,7 +12,6 @@ html, body {
     grid-template-areas:
     "toolbar"
     "main";
-    background-color: blue;
 }
 
 .toolbar {
@@ -21,16 +19,15 @@ html, body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-areas: "projects logout";
-    background-color: yellow;
 }
 
 .toolbar > * {
     padding-top: 14px;
+    text-align: right;
 }
 
 #projects {
     grid-area: projects;
-    float: left;
 }
 
 .logout {
@@ -42,7 +39,6 @@ html, body {
     grid-area: main;
     min-height: 100%;
     height: auto !important;
-    background-color: green;
     display: grid;
     grid-template-columns: 1fr 4fr;
     grid-template-areas:
@@ -51,7 +47,6 @@ html, body {
 
 .fileselector {
     grid-area: fileselector;
-    background-color: orange;
 }
 
 label {
@@ -71,9 +66,23 @@ label {
     transition: opacity 0.2s linear, height 0.2s linear;
 }
 
+.folder, .file {
+    cursor: pointer;
+}
+
+.folder::before {
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    font-family: "Font Awesome 5 Free";
+    font-weight: 400;
+    content: "\f0da";
+}
+
 .workarea {
     grid-area: workarea;
-    background-color: purple;
     display: grid;
     grid-template-rows: 1fr 50px;
     grid-template-areas:
@@ -92,7 +101,6 @@ label {
     border: none;
     border-radius: 0;
     box-sizing: content-box;
-    background-color: white;
     overflow: auto;
     overflow-x: hidden;
     padding: 10px;
@@ -104,7 +112,6 @@ label {
 
 .controls {
     grid-area: controls;
-    background-color: pink;
 }
 
 .hidden {
