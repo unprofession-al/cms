@@ -30,6 +30,7 @@ function projectSelected() {
     router.setProject(projectName);
     mycro.listFiles(projectName).then(files => {
         filesElement.innerHTML = "";
+        workareaElement.innerHTML = "";
         files.children.forEach(function (child) {
             walkFileTree(child, filesElement);
         });
