@@ -15,8 +15,8 @@
                 </div>
             </div>
             <div class="main">
-                <div class="fileselector" id="files">Files</div>
-                <div class="workarea" id="workarea">w</div>
+                <div class="fileselector" id="files"></div>
+                <div class="workarea" id="workarea"></div>
             </div>
         </div>
         <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -26,12 +26,12 @@
 
 
 <script type="text/html" id="file_tmpl">
-    <div class="file" data-path="<%=path%>"><i class="fas fa-file-code"></i> <%=name%></div>
+    <div class="file" data-path="<%=path%>"><%=name%></div>
 </script>
 
 <script type="text/html" id="folder_tmpl">
     <input class="hidden checkbox" type="checkbox" id="<%=id%>"></input>
-    <label class="folder" data-path="<%=path%>" for="<%=id%>"><i class="fas fa-caret-right"></i> <%=name%></label>
+    <label class="folder" data-path="<%=path%>" for="<%=id%>"><%=name%></label>
     <div class="foldercontent"></div>
 </script>
 

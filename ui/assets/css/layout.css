@@ -52,17 +52,33 @@ label {
     height: 0;
     opacity: 0;
     overflow: hidden;
-    transition: opacity 0.2s linear, height 0.2s linear;
+    transition: all 0.3s linear;
 }
 
-.checkbox:checked + label + .foldercontent {
+.checkbox:checked + label.folder + .foldercontent {
     height: auto;
     opacity: 1;
-    transition: opacity 0.2s linear, height 0.2s linear;
+    transition: all 0.3s linear;
 }
 
 .folder, .file {
     cursor: pointer;
+}
+
+label.folder::before {
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    content: "\f105 ";
+    width: 15px;
+}
+
+.checkbox:checked + label.folder::before {
+    content: "\f107 ";
 }
 
 .workarea {
