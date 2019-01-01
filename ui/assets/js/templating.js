@@ -40,7 +40,7 @@ Define the JavaScript
 
 var cache = {};
 
-function render(str, data){
+export function render(str, data){
     // Figure out if we're getting a template, or if we need to
     // load the template - and be sure to cache the result.
     var fn = !/\W/.test(str) ?
@@ -69,5 +69,3 @@ function render(str, data){
     // Provide some basic currying to the user
     return data ? fn( data ) : fn;
 };
-
-export { render };
