@@ -25,9 +25,9 @@ export function App(config) {
 }
 
 App.prototype.run = function() {
-    this.projectsElement.addEventListener('change', this.projectSelected.bind(this), false);
+    this.projectsElement.addEventListener('change', event => this.projectSelected(event), false);
 
-    var filesElementObserver = new MutationObserver(this.updateFileClickWatcher.bind(this));
+    var filesElementObserver = new MutationObserver(event => this.updateFileClickWatcher(event));
     filesElementObserver.observe(this.filesElement, { attributes: true, childList: true, subtree: true });
 
     mycro.listProjects().then(projects => {
@@ -43,7 +43,7 @@ App.prototype.run = function() {
 App.prototype.updateFileClickWatcher = function() {
     var fileElements = document.querySelectorAll(".file");
     for (var i = 0, len = fileElements.length; i < len; i++) {
-        fileElements[i].addEventListener('click', this.fileSelected.bind(this), false);
+        fileElements[i].addEventListener('click', event => this.fileSelected(event), false);
     }
 }
 
