@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Sever holds all dependencies of the webserver
 type Server struct {
 	sites    map[string]*Site
 	listener string
@@ -40,7 +41,7 @@ func NewServer(listener, static string, sites map[string]*Site) Server {
 	return s
 }
 
-func (s Server) Run() {
+func (s Server) run() {
 	fmt.Printf("Serving cms at http://%s\nPress CTRL-c to stop...\n", s.listener)
 	log.Fatal(http.ListenAndServe(s.listener, s.handler))
 }

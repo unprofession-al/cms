@@ -90,7 +90,7 @@ func main() {
 	}
 
 	s := NewServer(app.listener, app.static, c.Sites)
-	s.Run()
+	s.run()
 }
 
 type Node struct {
